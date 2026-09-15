@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise DWARKAS - JMS ERP</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root{
+            --bg:#070b14;
+            --panel:rgba(15,23,42,.72);
+            --panel2:rgba(17,29,51,.82);
+            --line:rgba(148,163,184,.16);
+            --text:#eaf2ff;
+            --muted:#8ea0bb;
+            --cyan:#39d8ff;
+            --violet:#8b5cf6;
+            --green:#35e0a1;
+            --orange:#ffb35c;
+            --danger:#ff6b81;
+            --shadow:0 24px 70px rgba(0,0,0,.35);
+        }
+        *{box-sizing:border-box}
+        html,body{min-height:100%;margin:0}
+        body{
+            font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+            background:
+                radial-gradient(circle at 15% 10%,rgba(57,216,255,.12),transparent 28%),
+                radial-gradient(circle at 85% 15%,rgba(139,92,246,.14),transparent 30%),
+                radial-gradient(circle at 55% 90%,rgba(53,224,161,.08),transparent 28%),
+                var(--bg);
+            color:var(--text);
+            overflow-x:hidden;
+        }
+        #app-animation-canvas{
+            position:fixed;
+            inset:0;
+            width:100vw;
+            height:100vh;
+            display:block;
+            pointer-events:none;
+            z-index:0;
+            opacity:.72;
+        }
+        #app-animation-canvas.form-animation-hidden{
+            display:none;
+        }
+        #login-screen,#dashboard-screen{position:relative;z-index:1}
+        #login-intro{
+            position:fixed;
+            inset:0;
+            z-index:20000;
+            display:grid;
+            place-items:center;
+            overflow:hidden;
+            background:
+                radial-gradient(circle at center,rgba(20,55,77,.34),transparent 34%),
+                rgba(4,8,17,.96);
+            opacity:0;
+            visibility:hidden;
+            pointer-events:none;
+        }
+        #login-intro.show{
+            opacity:1;
+            visibility:visible;
+            transition:opacity .45s ease;
+        }
+        .intro-content{
+            position:relative;
+            display:flex;
+            flex-direction:column;
+            align-items:center;
+            gap:22px;
+            animation:introContentIn .9s cubic-bezier(.2,.8,.2,1) both;
+        }
+        .intro-orbit{
+            position:absolute;
+            width:310px;
+            height:310px;
+            border:1px solid rgba(57,216,255,.28);
+            border-radius:50%;
+            transform:rotate(-28deg) scaleY(.42);
+            box-shadow:0 0 35px rgba(57,216,255,.12),inset 0 0 35px rgba(139,92,246,.1);
+            animation:orbitSpin 5s linear infinite;
+        }
+        .intro-orbit::after{
+            content:"";
+            position:absolute;
+            inset:24px;
+            border:1px solid rgba(139,92,246,.26);
+            border-radius:50%;
+        }
+        .intro-core{
+            width:128px;
+            height:128px;
+            border-radius:42% 58% 55% 45%;
+            background:
+                radial-gradient(circle at 32% 28%,#eaffff 0 3%,transparent 11%),
+                radial-gradient(circle at 62% 36%,#74f0ff,transparent 34%),
+                linear-gradient(135deg,#1ccfff,#7665f7 68%,#35e0a1);
+            filter:drop-shadow(0 0 24px rgba(57,216,255,.7));
+            animation:introCore 2.8s ease-in-out infinite;
+        }
+        .intro-title{
+            margin-top:8px;
+            color:#f2fbff;
+            font-size:clamp(28px,5vw,56px);
+            font-weight:900;
+            letter-spacing:.16em;
+            text-transform:uppercase;
+            text-shadow:0 0 28px rgba(57,216,255,.34);
+        }
+        .intro-subtitle{
+            color:#91abc5;
+            font-size:12px;
+            letter-spacing:.28em;
+            text-transform:uppercase;
+        }
+        @keyframes introContentIn{
+            from{opacity:0;transform:scale(.82) translateY(14px)}
+            to{opacity:1;transform:scale(1) translateY(0)}
+        }
+        @keyframes introCore{
+            50%{transform:scale(1.1) rotate(12deg);border-radius:58% 42% 45% 55%}
+        }
+        @keyframes orbitSpin{
+            to{transform:rotate(332deg) scaleY(.42)}
+        }
+        @media (prefers-reduced-motion:reduce){
+            .intro-content,.intro-core,.intro-orbit{animation:none}
+        }
+        body:before{
+            content:"";position:fixed;inset:0;pointer-events:none;opacity:.24;
+            background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+                             linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+            background-size:44px 44px;
+            mask-image:linear-gradient(to bottom,black,transparent 90%);
+        }
+        button,input,select{font:inherit}
+        button{cursor:pointer}
+        .hidden{display:none!important}
+
+        /* LOGIN SCREEN */
+        #login-screen{
+            min-height:100vh;display:flex;align-items:center;justify-content:center;
+            padding:28px;position:relative;overflow:hidden;
+        }
+        .orb{position:absolute;border-radius:50%;filter:blur(2px);animation:float 8s ease-in-out infinite}
+        .orb.one{width:260px;height:260px;background:rgba(57,216,255,.14);left:7%;top:10%}
+        .orb.two{width:340px;height:340px;background:rgba(139,92,246,.13);right:5%;bottom:3%;animation-delay:-3s}
+        .orb.three{width:120px;height:120px;background:rgba(53,224,161,.12);right:28%;top:12%;animation-delay:-5s}
+        @keyframes float{50%{transform:translate3d(0,-22px,0) scale(1.05)}}
+        .login-box{
+            width:min(430px,100%);padding:42px;border:1px solid var(--line);
+            border-radius:30px;background:linear-gradient(145deg,rgba(18,31,53,.88),rgba(8,14,26,.88));
+            box-shadow:var(--shadow),0 0 90px rgba(57,216,255,.07);
+            backdrop-filter:blur(24px);position:relative;z-index:2;
+        }
+        .brand-mark{display:flex;align-items:center;gap:14px;margin-bottom:30px}
+        .brand-cube{
+            width:52px;height:52px;border-radius:16px;
+            background:linear-gradient(135deg,var(--cyan),var(--violet));
+            box-shadow:0 12px 35px rgba(57,216,255,.24);
+            display:grid;place-items:center;font-weight:900;color:#06101c;
+            transform:rotate(-6deg);font-size:22px
+        }
+        .brand-title{font-size:28px;font-weight:850;letter-spacing:.08em}
+        .brand-sub{font-size:11px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-top:3px}
+        .login-box h2{font-size:24px;margin:0 0 7px}
+        .login-help{color:var(--muted);font-size:13px;margin-bottom:26px}
+        .input-group{margin-bottom:17px;text-align:left}
+        .input-group label{display:block;color:#b9c7da;font-size:12px;font-weight:700;margin-bottom:8px;letter-spacing:.04em}
+        .input-group input{
+            width:100%;padding:14px 15px;border-radius:14px;border:1px solid var(--line);
+            outline:none;background:rgba(255,255,255,.035);color:var(--text);transition:.25s;
+        }
+        .input-group input:focus{border-color:rgba(57,216,255,.6);box-shadow:0 0 0 4px rgba(57,216,255,.08)}
+        button.btn-primary{
+            border:0;width:100%;padding:14px 20px;border-radius:14px;
+            color:#04111a;font-weight:850;background:linear-gradient(100deg,var(--cyan),#72f0d0);
+            box-shadow:0 12px 30px rgba(57,216,255,.18);transition:.25s;
+        }
+        button.btn-primary:hover{transform:translateY(-2px);box-shadow:0 17px 38px rgba(57,216,255,.28)}
+        #login-error{color:#ff9aaa!important;font-size:12px!important;margin-bottom:12px!important}
+
+        /* APP SHELL & MEGA NAVBAR */
+        #dashboard-screen{min-height:100vh}
+
+        .top-header{
+            height:76px;display:flex;justify-content:space-between;align-items:center;padding:0 28px;
+            background:rgba(7,12,23,.72);border-bottom:1px solid var(--line);backdrop-filter:blur(20px);
+            position:sticky;top:0;z-index:900;
+        }
+
+        .logo{display:flex;align-items:center;gap:12px;font-size:20px;font-weight:900;letter-spacing:.14em}
+        .logo:before{content:"✦";display:grid;place-items:center;width:34px;height:34px;border-radius:11px;
+            background:linear-gradient(135deg,var(--cyan),var(--violet));color:#07111e;box-shadow:0 8px 24px rgba(57,216,255,.2)}
+        .user-info{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:12px}
+        .user-info strong,.user-info span{color:var(--text)}
+        .user-info button{border:1px solid var(--line);background:rgba(255,255,255,.045);color:#dce8f7;padding:9px 13px;border-radius:11px}
+
+        .navbar{
+            display:flex;
+            align-items:stretch;
+            gap:2px;
+            width:100%;
+            padding:5px 24px;
+            background:rgba(10,17,30,.98);
+            border-bottom:1px solid var(--line);
+            position:sticky;
+            top:76px;
+            z-index:10000;
+            backdrop-filter:blur(18px);
+            overflow:visible !important;
+            white-space:nowrap;
+            flex-wrap:nowrap;
+        }
+
+        .nav-item{
+            position:relative;
+            overflow:visible !important;
+            flex:1 1 0;
+            min-width:0;
+        }
+
+        .nav-link{
+            display:block;
+            width:100%;
+            color:#c6d3e4;
+            padding:8px 7px;
+            text-decoration:none;
+            font-size:12px;
+            cursor:pointer;
+            border-radius:8px;
+            transition:.2s;
+            font-weight:500;
+            user-select:none;
+            text-align:center;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+
+        .nav-link:hover,
+        .nav-link.active{
+            background:rgba(57,216,255,.1);
+            color:white;
+        }
+
+        .dropdown-menu{
+            display:none;
+            position:absolute;
+            top:calc(100% + 5px);
+            left:0;
+            min-width:220px;
+            padding:6px 0;
+            background:rgba(12,21,37,.99);
+            border:1px solid rgba(57,216,255,.2);
+            border-radius:10px;
+            box-shadow:0 20px 55px rgba(0,0,0,.8);
+            z-index:2147483647 !important;
+            backdrop-filter:blur(20px);
+            overflow:visible;
+        }
+
+        .dropdown-menu.show{
+            display:block;
+            animation:drop .15s ease-out;
+        }
+
+        @keyframes drop{
+            from{opacity:0;transform:translateY(4px)}
+            to{opacity:1;transform:translateY(0)}
+        }
+
+        .dropdown-menu a{
+            display:block;
+            color:#cbd7e7;
+            padding:10px 16px;
+            text-decoration:none;
+            font-size:12px;
+            cursor:pointer;
+            white-space:nowrap;
+            border-bottom:1px solid rgba(255,255,255,.02);
+        }
+
+        .dropdown-menu a:hover{
+            background:rgba(57,216,255,.12);
+            color:#39d8ff;
+            padding-left:20px;
+            transition:all .15s ease;
+        }
+
+        .content-area{
+            position:relative;
+            z-index:1;
+        }
+
+        /* PARTICLE ANIMATION WELCOME CARD */
+        .welcome-card{
+            min-height:500px;
+            position:relative;
+            overflow:hidden;
+            border:1px solid var(--line);
+            border-radius:18px;
+            background:rgba(255,255,255,.012);
+            display:flex;
+            flex-direction:column;
+            justify-content:center;
+            align-items:center;
+        }
+
+        .welcome-content{
+            position:relative;
+            z-index:10;
+            text-align:center;
+            max-width:800px;
+            padding:40px;
+        }
+
+        .eyebrow{font-size:11px;color:var(--cyan);font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+        .welcome-card h3{font-size:42px;line-height:1.12;margin:13px 0 10px;max-width:700px;font-weight:900;background:linear-gradient(135deg,var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+        .welcome-card p{color:var(--muted);max-width:650px;font-size:15px;line-height:1.7}
+        .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:30px}
+        .stat{padding:18px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.025);backdrop-filter:blur(10px)}
+        .stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+        .stat-value{font-size:22px;font-weight:850;margin-top:8px}
+        .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 13px var(--green);margin-right:6px}
+        
+        .section-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+        .section-title h3{margin:0;font-size:19px}
+        .form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+        .form-grid .input-group{margin:0}
+        .form-actions{margin-top:22px}
+        table{width:100%;border-collapse:separate;border-spacing:0;margin-top:10px;overflow:hidden;border:1px solid var(--line);border-radius:15px}
+        th,td{padding:14px;text-align:left;border-bottom:1px solid var(--line);font-size:12px}
+        th{background:rgba(57,216,255,.07);color:#a9eaff;font-size:10px;text-transform:uppercase;letter-spacing:.1em}
+        td{color:#cbd7e7;background:rgba(255,255,255,.012)}
+        tr:hover td{background:rgba(57,216,255,.035)}
+        .table-wrap{overflow:auto}
+        .footnote{color:var(--muted);font-size:11px;margin-top:12px}
+        
+        .module-utilities {
+            margin-top: 15px; padding-top: 15px; border-top: 1px solid var(--line);
+            display: flex; gap: 10px; align-items: center;
+        }
+        .btn-utility {
+            background: rgba(57,216,255,.1); border: 1px solid var(--cyan); color: var(--cyan);
+            padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 600; cursor: pointer; transition: .2s;
+        }
+        .btn-utility:hover { background: var(--cyan); color: #04111a; }
+
+        @media (max-width:900px){
+            .navbar{
+                padding:5px 8px;
+                gap:1px;
+            }
+            .nav-link{
+                font-size:11px;
+                padding:8px 4px;
+            }
+            .dropdown-menu{
+                position:fixed;
+                top:auto;
+                left:auto;
+                max-width:calc(100vw - 16px);
+                max-height:70vh;
+                overflow-y:auto;
+                overflow-x:hidden;
+            }
+            .welcome-card h3{
+                font-size:28px;
+            }
+            .stats{
+                grid-template-columns:repeat(2,1fr);
+            }
+        }
+
+        .card{
+            padding:28px;
+            border:1px solid var(--line);
+            border-radius:18px;
+            background:rgba(15,23,42,.72);
+            margin:20px;
+            box-shadow:var(--shadow);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="app-animation-canvas" aria-hidden="true"></canvas>
+    <div id="login-intro" aria-hidden="true">
+        <div class="intro-content">
+            <div class="intro-orbit"></div>
+            <div class="intro-core"></div>
+            <div class="intro-title">DWARKAS ERP</div>
+            <div class="intro-subtitle">Enterprise Resource Platform</div>
+        </div>
+    </div>
+
+    <!-- 1. LOGIN SCREEN -->
+    <div id="login-screen">
+        <div class="orb one"></div><div class="orb two"></div><div class="orb three"></div>
+        <div class="login-box">
+            <div class="brand-mark">
+                <div class="brand-cube">D</div>
+                <div>
+                    <div class="brand-title">DWARKAS</div>
+                    <div class="brand-sub">Enterprise Resource Platform</div>
+                </div>
+            </div>
+            <h2>Welcome back</h2>
+            <div class="login-help">Sign in to your intelligent enterprise workspace.</div>
+            <div id="login-error"></div>
+            <div class="input-group">
+                <label>USERNAME</label>
+                <input type="text" id="username" placeholder="Enter username (admin / staff)" autocomplete="username">
+            </div>
+            <div class="input-group">
+                <label>PASSWORD</label>
+                <input type="password" id="password" placeholder="Enter password (123)" autocomplete="current-password">
+            </div>
+            <button class="btn-primary" onclick="login()">Enter DWARKAS ERP →</button>
+        </div>
+    </div>
+
+    <!-- 2. ERP DASHBOARD SCREEN -->
+    <div id="dashboard-screen" style="display: none;">
+        
+        <div class="top-header">
+            <div class="logo">DWARKAS ERP</div>
+            <div class="user-info">
+                Logged in as: <strong id="display-user"></strong> (<span id="display-role"></span>)
+                <button onclick="logout()" style="margin-left: 15px;">Logout</button>
+            </div>
+        </div>
+
+        <!-- Complete JMS Mega Navigation Bar with Home Option -->
+        <div class="navbar">
+            <!-- Home Option added -->
+            <div class="nav-item">
+                <a class="nav-link" onclick="showView('welcome-view')">Home</a>
+            </div>
+
+            <!-- Masters Menu -->
+            <div class="nav-item">
+                <a class="nav-link">Masters ▾</a>
+                <div class="dropdown-menu">
+                    <a onclick="showView('add-product-view')">Add New Product</a>
+                    <a onclick="showView('vendor-master-view')">Vendor Master</a>
+                    <a onclick="showView('employee-master-view')">Employee Master</a>
+                    <a href="#">Clients Master</a>
+                    <a href="#">External Artisans</a>
+                    <a href="#">Model Master</a>
+                    <a href="#">Die Nos</a>
+                    <a href="#">Currency Rate</a>
+                    <a href="#">Metal Rate</a>
+                </div>
+            </div>
+
+            <!-- Order Menu -->
+            <div class="nav-item">
+                <a class="nav-link">Order ▾</a>
+                <div class="dropdown-menu">
+                    <a href="#">Sales Orders</a>
+                    <a href="#">Stone Order Planning</a>
+                    <a href="#">Jewelry Order Pre Planning</a>
+                    <a href="#">Production Order</a>
+                    <a href="#">Requisition Order</a>
+                    <a href="#">Purchase Order</a>
+                    <a href="#">Stock Order</a>
+                </div>
+            </div>
+
+            <!-- Purchase Menu -->
+            <div class="nav-item">
+                <a class="nav-link">Purchase ▾</a>
+                <div class="dropdown-menu">
+                    <a href="#">Inward</a>
+                    <a href="#">Approval Memo Return</a>
+                    <a href="#">Purchase Bill</a>
+                    <a href="#">Purchase Return</a>
+                    <a href="#">Purchase Requisition</a>
+                    <a href="#">Job Work</a>
+                    <a href="#">Client Repair</a>
+                    <a href="#">Old Gold</a>
+                    <a href="#">Buy Back</a>
+                    <a href="#">Store Consumables</a>
+                    <a href="#">Vendor Voucher</a>
+                </div>
+            </div>
+
+            <!-- Transfer/Receive -->
+            <div class="nav-item">
+                <a class="nav-link">Transfer/Receive ▾</a>
+                <div class="dropdown-menu">
+                    <a href="#">Transfer</a>
+                    <a href="#">Receive</a>
+                    <a href="#">Store Consumables</a>
+                </div>
+            </div>
+
+            <!-- Assortment/Melting -->
+            <div class="nav-item">
+                <a class="nav-link">Assortment/Melting ▾</a>
+                <div class="dropdown-menu">
+                    <a href="#">Conversion</a>
+                    <a href="#">Remodeling</a>
+                    <a href="#">Merging</a>
+                    <a href="#">Stone Filing</a>
+                    <a href="#">Melting</a>
+                    <a href="#">Refining</a>
+                </div>
+            </div>
+
+            <!-- Manufacturing -->
+            <div class="nav-item">
+                <a class="nav-link">Manufacturing ▾</a>
+                <div class="dropdown-menu">
+                    <a href="#">Job Cards</a>
+                    <a href="#">Wax Injecting</a>
+                    <a href="#">Casting</a>
+                    <a href="#">Dust Received</a>
+                    <a href="#">External Artisan</a>
+                </div>
+            </div>
+
+            <!-- Sales -->
+            <div class="nav-item">
+                <a class="nav-link">Sales ▾</a>
+                <div class="dropdown-menu">
+                    <a href="#">Packing Slip</a>
+                    <a href="#">Retail/Wholesale/Online</a>
+                    <a href="#">Export</a>
+                    <a href="#">Invoice Job Work</a>
+                    <a href="#">Issue Item</a>
+                </div>
+            </div>
+
+            <!-- Reports -->
+            <div class="nav-item">
+                <a class="nav-link">Reports ▾</a>
+                <div class="dropdown-menu">
+                    <a onclick="loadInventory()">Live Inventory Stock</a>
+                    <a href="#">Collection Summary</a>
+                    <a href="#">MRP Report</a>
+                    <a href="#">Stock Report</a>
+                    <a href="#">Transaction Report</a>
+                    <a href="#">Day Close</a>
+                    <a href="#">Stock Check</a>
+                    <a href="#">Manufacturing Report</a>
+                </div>
+            </div>
+
+            <!-- Search -->
+            <div class="nav-item">
+                <a class="nav-link">Search ▾</a>
+                <div class="dropdown-menu">
+                    <a href="#">Job Card Search</a>
+                    <a href="#">Total Production</a>
+                    <a href="#">Packet Search</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            
+            <!-- VIEW 1: Dashboard Home with Particle Animation -->
+            <div id="welcome-view">
+                <div class="welcome-card">
+                    <div class="welcome-content">
+                        <div class="eyebrow"><span class="dot"></span>System online • Enterprise control center</div>
+                        <h3>Dwarkas ERP Workspace</h3>
+                        <p>Select any module from the top navigation bar to operate fully connected interactive forms.</p>
+                        <div class="stats">
+                            <div class="stat"><div class="stat-label">System Architecture</div><div class="stat-value">Client-Server</div></div>
+                            <div class="stat"><div class="stat-label">Database Engine</div><div class="stat-value">SQLite3</div></div>
+                            <div class="stat"><div class="stat-label">Security Protocol</div><div class="stat-value">RBAC Active</div></div>
+                            <div class="stat"><div class="stat-label">Sync Status</div><div class="stat-value">Real-Time</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: Add New Product Form -->
+            <div id="add-product-view" class="card hidden">
+                <div class="section-title"><h3>Add Inventory Product</h3><span>MASTER DATA</span></div>
+                <div id="add-message" class="footnote"></div>
+                <div class="form-grid">
+                    <div class="input-group"><label>PRODUCT NAME</label><input type="text" id="prod-name" placeholder="e.g. Gold Ring 22K"></div>
+                    <div class="input-group"><label>QUANTITY</label><input type="number" id="prod-qty" placeholder="0" min="0"></div>
+                    <div class="input-group"><label>PRICE (₹)</label><input type="number" id="prod-price" placeholder="0.00" min="0"></div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-primary" style="width:auto;min-width:210px" onclick="addProduct()">Save Product →</button>
+                </div>
+                <div class="module-utilities">
+                    <span style="font-size:11px; color:var(--muted)">Bulk Operations:</span>
+                    <button class="btn-utility" onclick="exportExcel('products')">📥 Export Products</button>
+                    <input type="file" id="product-file" accept=".xlsx, .xls" style="display: none;" onchange="importExcel(event, 'products')">
+                    <button class="btn-utility" onclick="document.getElementById('product-file').click()">📤 Bulk Import Products</button>
+                </div>
+            </div>
+
+            <!-- VIEW 3: Vendor Master Form -->
+            <div id="vendor-master-view" class="card hidden">
+                <div class="section-title"><h3>Vendor Master</h3><span>PARTNER DATA</span></div>
+                <div id="vendor-message" class="footnote"></div>
+                <div class="form-grid">
+                    <div class="input-group"><label>VENDOR NAME</label><input type="text" id="vendor-name" placeholder="e.g. Diamond Corp"></div>
+                    <div class="input-group"><label>CONTACT DETAILS</label><input type="text" id="vendor-contact" placeholder="Phone / Email"></div>
+                    <div class="input-group"><label>SUPPLY CATEGORY</label><input type="text" id="vendor-category" placeholder="e.g. Raw Gold / Diamonds"></div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-primary" style="width:auto;min-width:210px" onclick="addVendor()">Save Vendor →</button>
+                </div>
+                <div class="module-utilities">
+                    <span style="font-size:11px; color:var(--muted)">Bulk Operations:</span>
+                    <button class="btn-utility" onclick="exportExcel('vendors')">📥 Export Vendors</button>
+                    <input type="file" id="vendor-file" accept=".xlsx, .xls" style="display: none;" onchange="importExcel(event, 'vendors')">
+                    <button class="btn-utility" onclick="document.getElementById('vendor-file').click()">📤 Bulk Import Vendors</button>
+                </div>
+            </div>
+
+            <!-- VIEW 4: Employee Master Form -->
+            <div id="employee-master-view" class="card hidden">
+                <div class="section-title"><h3>Employee Master</h3><span>HR MANAGEMENT</span></div>
+                <div id="employee-message" class="footnote"></div>
+                <div class="form-grid">
+                    <div class="input-group"><label>EMPLOYEE NAME</label><input type="text" id="emp-name" placeholder="e.g. Rajesh Kumar"></div>
+                    <div class="input-group"><label>ROLE / DESIGNATION</label><input type="text" id="emp-role" placeholder="e.g. Master Karigar"></div>
+                    <div class="input-group"><label>PHONE NUMBER</label><input type="text" id="emp-phone" placeholder="9876543210"></div>
+                </div>
+                <div class="form-actions">
+                    <button class="btn-primary" style="width:auto;min-width:210px" onclick="addEmployee()">Save Employee →</button>
+                </div>
+                <div class="module-utilities">
+                    <span style="font-size:11px; color:var(--muted)">Bulk Operations:</span>
+                    <button class="btn-utility" onclick="exportExcel('employees')">📥 Export Employees</button>
+                    <input type="file" id="employee-file" accept=".xlsx, .xls" style="display: none;" onchange="importExcel(event, 'employees')">
+                    <button class="btn-utility" onclick="document.getElementById('employee-file').click()">📤 Bulk Import Employees</button>
+                </div>
+            </div>
+
+            <!-- VIEW 5: Live Inventory Stock Table -->
+            <div id="inventory-view" class="card hidden">
+                <div class="section-title"><h3>Live Inventory Stock</h3><span><span class="dot"></span>REAL-TIME SYNC</span></div>
+                <div class="table-wrap"><table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Product Name</th>
+                            <th>Quantity</th>
+                            <th>Price (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-table-body">
+                        <!-- Loaded dynamically -->
+                    </tbody>
+                </table></div>
+                <div class="footnote">Data fetched securely from connected SQLite database.</div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT APP LOGIC -->
+    <script>
+        const BACKEND_URL = "http://127.0.0.1:5000";
+        const AUTH_TOKEN_KEY = "dwarkas_erp_token";
+        let currentUser = "";
+        let currentRole = "";
+        let particleAnimationInstance = null;
+
+        function getAuthHeaders(extraHeaders = {}) {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            return {
+                ...extraHeaders,
+                ...(token ? { Authorization: `Bearer ${token}` } : {})
+            };
+        }
+
+        // Particle Animation Class
+        class ParticleAnimation {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.mouse = { x: 0, y: 0 };
+                this.animationId = null;
+                this.handleResize = () => this.resize();
+                this.handleMouseMove = (event) => {
+                    this.mouse.x = event.clientX;
+                    this.mouse.y = event.clientY;
+                };
+                
+                this.resize();
+                this.initParticles();
+                this.setupEventListeners();
+                this.animate();
+            }
+
+            resize() {
+                const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+                this.canvas.width = Math.floor(window.innerWidth * pixelRatio);
+                this.canvas.height = Math.floor(window.innerHeight * pixelRatio);
+                this.canvas.style.width = `${window.innerWidth}px`;
+                this.canvas.style.height = `${window.innerHeight}px`;
+                this.ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+                this.viewportWidth = window.innerWidth;
+                this.viewportHeight = window.innerHeight;
+            }
+
+            initParticles() {
+                this.particles = [];
+                const particleCount = 110;
+                
+                for (let i = 0; i < particleCount; i++) {
+                    this.particles.push({
+                        x: Math.random() * this.viewportWidth,
+                        y: Math.random() * this.viewportHeight,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        size: Math.random() * 2.5 + 0.5,
+                        opacity: Math.random() * 0.5 + 0.3,
+                        targetOpacity: Math.random() * 0.5 + 0.3,
+                        pulse: Math.random() * Math.PI * 2
+                    });
+                }
+            }
+
+            setupEventListeners() {
+                window.addEventListener('resize', this.handleResize);
+                document.addEventListener('mousemove', this.handleMouseMove);
+            }
+
+            animate() {
+                this.ctx.clearRect(0, 0, this.viewportWidth, this.viewportHeight);
+                
+                // Update and draw particles
+                this.particles.forEach((particle, i) => {
+                    // Movement
+                    particle.x += particle.vx;
+                    particle.y += particle.vy;
+
+                    // Bounce off edges
+                    if (particle.x < 0 || particle.x > this.viewportWidth) particle.vx *= -1;
+                    if (particle.y < 0 || particle.y > this.viewportHeight) particle.vy *= -1;
+
+                    // Keep in bounds
+                    particle.x = Math.max(0, Math.min(this.viewportWidth, particle.x));
+                    particle.y = Math.max(0, Math.min(this.viewportHeight, particle.y));
+
+                    // Pulse animation
+                    particle.pulse += 0.02;
+                    particle.opacity = particle.targetOpacity + Math.sin(particle.pulse) * 0.15;
+                    
+                    // Mouse interaction
+                    const dx = particle.x - this.mouse.x;
+                    const dy = particle.y - this.mouse.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 150) {
+                        const angle = Math.atan2(dy, dx);
+                        particle.vx = Math.cos(angle) * 0.2;
+                        particle.vy = Math.sin(angle) * 0.2;
+                    }
+
+                    // Draw particle
+                    this.ctx.fillStyle = `rgba(57, 216, 255, ${particle.opacity})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    // Draw connections
+                    this.particles.forEach((otherParticle, j) => {
+                        if (i < j) {
+                            const dx = particle.x - otherParticle.x;
+                            const dy = particle.y - otherParticle.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 200) {
+                                const opacity = (1 - distance / 200) * 0.3;
+                                this.ctx.strokeStyle = `rgba(57, 216, 255, ${opacity})`;
+                                this.ctx.lineWidth = 0.5;
+                                this.ctx.beginPath();
+                                this.ctx.moveTo(particle.x, particle.y);
+                                this.ctx.lineTo(otherParticle.x, otherParticle.y);
+                                this.ctx.stroke();
+                            }
+                        }
+                    });
+                });
+
+                this.animationId = requestAnimationFrame(() => this.animate());
+            }
+
+            stop() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                window.removeEventListener('resize', this.handleResize);
+                document.removeEventListener('mousemove', this.handleMouseMove);
+            }
+        }
+
+        // Menu Toggle Event Handler
+        document.addEventListener("DOMContentLoaded", () => {
+            const navLinks = document.querySelectorAll('.nav-link');
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    const dropdown = this.nextElementSibling;
+                    if(dropdown && dropdown.classList.contains('dropdown-menu')) {
+                        e.preventDefault(); 
+                        e.stopPropagation(); 
+                        const isShowing = dropdown.classList.contains('show');
+                        document.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
+                        document.querySelectorAll('.nav-link.active').forEach(l => l.classList.remove('active'));
+                        if(!isShowing) {
+                            dropdown.classList.add('show');
+                            this.classList.add('active');
+                        }
+                    }
+                });
+            });
+
+            document.addEventListener('click', (e) => {
+                if(!e.target.closest('.nav-item')) {
+                    document.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
+                    document.querySelectorAll('.nav-link.active').forEach(l => l.classList.remove('active'));
+                }
+            });
+
+            document.querySelectorAll('.dropdown-menu a').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.dropdown-menu.show').forEach(m => m.classList.remove('show'));
+                    document.querySelectorAll('.nav-link.active').forEach(l => l.classList.remove('active'));
+                });
+
+                particleAnimationInstance = new ParticleAnimation(
+                    document.getElementById('app-animation-canvas')
+                );
+            });
+        });
+
+        async function login() {
+            const user = document.getElementById("username").value;
+            const pass = document.getElementById("password").value;
+            try {
+                const response = await fetch(`${BACKEND_URL}/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    currentUser = data.username;
+                    currentRole = data.role;
+                    localStorage.setItem(AUTH_TOKEN_KEY, data.token || "");
+                    document.getElementById("display-user").innerText = currentUser;
+                    document.getElementById("display-role").innerText = currentRole;
+                    document.getElementById("login-screen").style.display = "none";
+                    document.getElementById("dashboard-screen").style.display = "block";
+                    showView("welcome-view");
+                    showLoginIntro();
+                } else {
+                    localStorage.removeItem(AUTH_TOKEN_KEY);
+                    document.getElementById("login-error").innerText = data.message;
+                }
+            } catch (error) {
+                localStorage.removeItem(AUTH_TOKEN_KEY);
+                document.getElementById("login-error").innerText = "Cannot connect to server. Is backend.py running?";
+            }
+        }
+
+        async function logout() {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY);
+            if (token) {
+                try {
+                    await fetch(`${BACKEND_URL}/logout`, {
+                        method: "POST",
+                        headers: getAuthHeaders({ "Content-Type": "application/json" })
+                    });
+                } catch (error) {
+                    // Ignore logout errors and clear local session anyway.
+                }
+            }
+
+            currentUser = "";
+            currentRole = "";
+            localStorage.removeItem(AUTH_TOKEN_KEY);
+            document.getElementById("login-intro").classList.remove("show");
+            document.getElementById("login-screen").style.display = "flex";
+            document.getElementById("dashboard-screen").style.display = "none";
+            document.getElementById("username").value = "";
+            document.getElementById("password").value = "";
+            document.getElementById("login-error").innerText = "";
+            showView("welcome-view");
+        }
+
+        function showView(viewId) {
+            document.getElementById("welcome-view").classList.add("hidden");
+            document.getElementById("add-product-view").classList.add("hidden");
+            document.getElementById("vendor-master-view").classList.add("hidden");
+            document.getElementById("employee-master-view").classList.add("hidden");
+            document.getElementById("inventory-view").classList.add("hidden");
+            document.getElementById(viewId).classList.remove("hidden");
+
+            const animationCanvas = document.getElementById("app-animation-canvas");
+            const isDataEntryView = [
+                "add-product-view",
+                "vendor-master-view",
+                "employee-master-view"
+            ].includes(viewId);
+            animationCanvas.classList.toggle("form-animation-hidden", isDataEntryView);
+        }
+
+        function showLoginIntro() {
+            const intro = document.getElementById("login-intro");
+            intro.classList.add("show");
+            window.setTimeout(() => {
+                intro.classList.remove("show");
+            }, 3000);
+        }
+
+        async function loadInventory() {
+            showView("inventory-view");
+            const tbody = document.getElementById("inventory-table-body");
+            tbody.innerHTML = "<tr><td colspan='4'>Loading data from server...</td></tr>";
+            try {
+                const response = await fetch(`${BACKEND_URL}/products`, {
+                    headers: getAuthHeaders()
+                });
+                if (response.status === 401 || response.status === 403) {
+                    const data = await response.json().catch(() => ({}));
+                    tbody.innerHTML = `<tr><td colspan='4' style='color:red;'>${data.message || "Session expired or access denied."}</td></tr>`;
+                    return;
+                }
+                const products = await response.json();
+                tbody.innerHTML = "";
+                if(products.length === 0) {
+                    tbody.innerHTML = "<tr><td colspan='4'>No products found in inventory.</td></tr>";
+                    return;
+                }
+                products.forEach(p => {
+                    tbody.innerHTML += `<tr><td>${p.id}</td><td>${p.name}</td><td>${p.quantity}</td><td>₹${p.price}</td></tr>`;
+                });
+            } catch (error) {
+                tbody.innerHTML = "<tr><td colspan='4' style='color:red;'>Error connecting to backend database.</td></tr>";
+            }
+        }
+
+        async function addProduct() {
+            const name = document.getElementById("prod-name").value;
+            const qty = document.getElementById("prod-qty").value;
+            const price = document.getElementById("prod-price").value;
+            const msgBox = document.getElementById("add-message");
+            
+            if(!name || !qty || !price) {
+                msgBox.innerText = "Please fill all required fields.";
+                msgBox.style.color = "orange";
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/add-product`, {
+                    method: "POST",
+                    headers: getAuthHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ name, quantity: qty, price })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    msgBox.innerText = "✅ " + data.message;
+                    msgBox.style.color = "green";
+                    document.getElementById("prod-name").value = "";
+                    document.getElementById("prod-qty").value = "";
+                    document.getElementById("prod-price").value = "";
+                } else {
+                    msgBox.innerText = "❌ " + data.message;
+                    msgBox.style.color = "red";
+                }
+            } catch (error) {
+                msgBox.innerText = "Error saving product.";
+                msgBox.style.color = "red";
+            }
+        }
+
+        async function addVendor() {
+            const name = document.getElementById("vendor-name").value;
+            const contact = document.getElementById("vendor-contact").value;
+            const category = document.getElementById("vendor-category").value;
+            const msgBox = document.getElementById("vendor-message");
+            
+            if(!name) {
+                msgBox.innerText = "Please enter Vendor Name.";
+                msgBox.style.color = "orange";
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/add-vendor`, {
+                    method: "POST",
+                    headers: getAuthHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ vendor_name: name, contact_details: contact, supply_category: category })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    msgBox.innerText = "✅ " + data.message;
+                    msgBox.style.color = "green";
+                    document.getElementById("vendor-name").value = "";
+                    document.getElementById("vendor-contact").value = "";
+                    document.getElementById("vendor-category").value = "";
+                } else {
+                    msgBox.innerText = "❌ " + data.message;
+                    msgBox.style.color = "red";
+                }
+            } catch (error) {
+                msgBox.innerText = "Error saving vendor.";
+                msgBox.style.color = "red";
+            }
+        }
+
+        async function addEmployee() {
+            const name = document.getElementById("emp-name").value;
+            const empRole = document.getElementById("emp-role").value;
+            const phone = document.getElementById("emp-phone").value;
+            const msgBox = document.getElementById("employee-message");
+            
+            if(!name) {
+                msgBox.innerText = "Please enter Employee Name.";
+                msgBox.style.color = "orange";
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/add-employee`, {
+                    method: "POST",
+                    headers: getAuthHeaders({ "Content-Type": "application/json" }),
+                    body: JSON.stringify({ emp_name: name, emp_role: empRole, emp_phone: phone })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    msgBox.innerText = "✅ " + data.message;
+                    msgBox.style.color = "green";
+                    document.getElementById("emp-name").value = "";
+                    document.getElementById("emp-role").value = "";
+                    document.getElementById("emp-phone").value = "";
+                } else {
+                    msgBox.innerText = "❌ " + data.message;
+                    msgBox.style.color = "red";
+                }
+            } catch (error) {
+                msgBox.innerText = "Error saving employee.";
+                msgBox.style.color = "red";
+            }
+        }
+
+        function exportExcel(type) {
+            const token = localStorage.getItem(AUTH_TOKEN_KEY) || "";
+            const url = `${BACKEND_URL}/export-excel?type=${encodeURIComponent(type)}&token=${encodeURIComponent(token)}`;
+            window.open(url, '_blank');
+        }
+
+        async function importExcel(event, type) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("type", type);
+
+            try {
+                alert(`Uploading ${type} excel data...`);
+                const response = await fetch(`${BACKEND_URL}/import-excel`, {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: formData
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert("✅ Success: " + data.message);
+                } else {
+                    alert("❌ Error: " + data.message);
+                }
+            } catch (error) {
+                alert("❌ Bulk upload failed.");
+            }
+            event.target.value = "";
+        }
+    </script>
+</body>
+</html>
