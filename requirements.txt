@@ -1,7 +1,5 @@
 Flask
 Flask-Cors
-gunicorn
 pandas
 openpyxl
-numpy
-requests
+gunicorn
