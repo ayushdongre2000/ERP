@@ -1,18 +1,13 @@
-# Python ka light version image lein
 FROM python:3.10-slim
 
-# App ke liye andar folder banayein
 WORKDIR /app
 
-# Requirements install karein
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Baaki saari project files copy karein
 COPY . .
 
-# Port open karein
 EXPOSE 8000
 
-# Server start karne ki command
-CMD ["uvicorn", "backend:app", "--host", "0.0.0.0", "--port", "8000"]
+# Yahan Uvicorn ki jagah Flask ka server start karne ki command aayegi:
+CMD ["python", "backend.py"]
