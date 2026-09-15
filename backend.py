@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_file
+from flask import Flask, jsonify, render_template, request, send_file
 from flask_cors import CORS
 import io
 import os
@@ -9,7 +9,8 @@ import time
 import pandas as pd
 from werkzeug.security import check_password_hash, generate_password_hash
 
-app = Flask(__name__)
+# template_folder='.' likhna zaroori hai taaki render index.html ko dhoond sake
+app = Flask(__name__, template_folder='.')
 app.config["SECRET_KEY"] = os.environ.get("ERP_SECRET_KEY", "change-this-secret-in-production")
 CORS(
     app,
@@ -146,6 +147,13 @@ def init_db():
 
 
 init_db()
+
+
+# --- YEH HOMEPAGE ROUTE ADD KIYA HAI ---
+@app.route("/")
+def home():
+    return render_template("index.html")
+# ---------------------------------------
 
 
 @app.route("/login", methods=["POST"])
