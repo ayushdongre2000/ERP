@@ -9,5 +9,4 @@ COPY . .
 
 EXPOSE 8000
 
-# Yahan Uvicorn ki jagah Flask ka server start karne ki command aayegi:
 CMD ["python", "backend.py"]
